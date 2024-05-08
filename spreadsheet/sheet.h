@@ -27,9 +27,9 @@ public:
 
 	// Можете дополнить ваш класс нужными полями и методами
 private:
-    
-    void  FindCircularDependency(const CellInterface* cell, std::unordered_set<Position, PositionHasher>& passed_cells) const;
-    void  FindCircularDependency(const CellInterface* cell, Position pos) const;
+    void IsValidPos(const Position& pos) const;
+    void FindCircularDependency(const CellInterface* cell, std::unordered_set<Position, PositionHasher>& passed_cells) const;
+    void FindCircularDependency(const CellInterface* cell, Position pos) const;
     std::unordered_map<Position, std::unique_ptr<Cell>, PositionHasher> cells_;
     std::unordered_set<Position, PositionHasher> poses_;
 };

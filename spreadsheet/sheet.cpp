@@ -13,9 +13,7 @@ using namespace std::literals;
 Sheet::~Sheet() {}
 
 void Sheet::SetCell(Position pos, std::string text) {
-    if(!pos.IsValid()){
-        throw InvalidPositionException("Invalid cell position");
-    }
+    IsValidPos(pos);
     // Добавление ячейки
     std::unique_ptr<Cell> cell = std::make_unique<Cell>(*this);
     cell->Set(text);
@@ -25,17 +23,13 @@ void Sheet::SetCell(Position pos, std::string text) {
 
     // Добавление позиции для расчета
     // минимальной печатной области
-    
     poses_.insert(pos);
-    
 }
 
 const CellInterface* Sheet::GetCell(Position pos) const {
-    if(!pos.IsValid()){
-        throw InvalidPositionException("Invalid cell position");
-    }
+    IsValidPos(pos);
 
-    if(!cells_.count(pos)){
+    if(cells_.count(pos) == 0){
         return nullptr;
     }
 
@@ -43,11 +37,9 @@ const CellInterface* Sheet::GetCell(Position pos) const {
 }
 
 CellInterface* Sheet::GetCell(Position pos) {
-    if(!pos.IsValid()){
-        throw InvalidPositionException("Invalid cell position");
-    }
+    IsValidPos(pos);
 
-    if(!cells_.count(pos)){
+    if(cells_.count(pos) == 0){
         return nullptr;
     }
 
@@ -55,11 +47,9 @@ CellInterface* Sheet::GetCell(Position pos) {
 }
 
 Cell* Sheet::GetChangeableCell(Position pos){
-    if(!pos.IsValid()){
-        throw InvalidPositionException("Invalid cell position");
-    }
+    IsValidPos(pos);
 
-    if(!cells_.count(pos)){
+    if(cells_.count(pos) == 0){
         return nullptr;
     }
 
@@ -67,11 +57,9 @@ Cell* Sheet::GetChangeableCell(Position pos){
 }
 
 void Sheet::ClearCell(Position pos) {
-    if(!pos.IsValid()){
-        throw InvalidPositionException("Invalid cell position");
-    }
+    IsValidPos(pos);
 
-    if(!cells_.count(pos)){
+    if(cells_.count(pos) == 0){
         return;
     }
     
@@ -97,7 +85,7 @@ void Sheet::PrintValues(std::ostream& output) const {
     for(int row = 0; row < printable_size.rows; ++row){
         for(int col = 0; col < printable_size.cols; ++col){
             Position pos{row, col};
-            if(cells_.count(pos)){
+            if(cells_.count(pos) > 0){
                 CellInterface::Value val = cells_.at(pos)->GetValue();
                 if(std::holds_alternative<double>(val)){
                     output << std::get<double>(val);
@@ -120,7 +108,7 @@ void Sheet::PrintTexts(std::ostream& output) const {
     for(int row = 0; row < printable_size.rows; ++row){
         for(int col = 0; col < printable_size.cols; ++col){
             Position pos{row, col};
-            if(cells_.count(pos)){
+            if(cells_.count(pos) > 0){
                 output << cells_.at(pos)->GetText(); 
             }
 
@@ -132,7 +120,11 @@ void Sheet::PrintTexts(std::ostream& output) const {
     }
 }
 
-
+void Sheet::IsValidPos(const Position& pos) const {
+    if(!pos.IsValid()){
+        throw InvalidPositionException("Invalid cell position"); 
+    }
+}
 
 void Sheet::FindCircularDependency(const CellInterface* cell, std::unordered_set<Position, PositionHasher>& passed_cells) const{
     for (Position ref_pos : cell->GetReferencedCells()) {

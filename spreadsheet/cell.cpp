@@ -28,7 +28,7 @@ void Cell::TextImpl::Clear(){
 }
 
 Cell::Value Cell::TextImpl::GetValue() const{
-    if(content_[0] == '\''){
+    if(content_[0] == ESCAPE_SIGN){
         return content_.substr(1);
     }
 
@@ -70,7 +70,7 @@ std::string Cell::FormulaImpl::GetText() const {
     } catch(const FormulaException& exc){
         throw exc;
     }
-    return "=" + formula;
+    return FORMULA_SIGN + formula;
 }
 
 std::vector<Position> Cell::FormulaImpl::GetReferencedCells() const {
@@ -95,7 +95,7 @@ Cell::~Cell() = default;
 
 void Cell::Set(std::string text) {
     std::unique_ptr<Impl> temp = std::make_unique<EmptyImpl>();
-    if(text[0] == '=' && text.size() > 1){ 
+    if(text[0] == FORMULA_SIGN && text.size() > 1){ 
         temp = std::make_unique<FormulaImpl>(std::move(text), sheet_);
     } else if(!text.empty()) {
         temp = std::make_unique<TextImpl>(text);
