@@ -1,8 +1,8 @@
 #include "FormulaAST.h"
 
-#include "FormulaBaseListener.h"
-#include "FormulaLexer.h"
-#include "FormulaParser.h"
+#include <FormulaBaseListener.h>
+#include <FormulaLexer.h>
+#include <FormulaParser.h>
 
 #include <cassert>
 #include <cmath>
@@ -72,7 +72,7 @@ public:
     virtual ~Expr() = default;
     virtual void Print(std::ostream& out) const = 0;
     virtual void DoPrintFormula(std::ostream& out, ExprPrecedence precedence) const = 0;
-    virtual double Evaluate(/*добавьте сюда нужные аргументы*/ args) const = 0;
+    virtual double Evaluate(std::function<double(Position)> value_getter) const = 0;
 
     // higher is tighter
     virtual ExprPrecedence GetPrecedence() const = 0;
@@ -142,8 +142,24 @@ public:
         }
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/) const override {
-			// Скопируйте ваше решение из предыдущих уроков.
+// Реализуйте метод Evaluate() для бинарных операций.
+// При делении на 0 выбрасывайте ошибку вычисления FormulaError
+    double Evaluate(std::function<double(Position)> value_getter) const override {
+        switch (type_) {
+            case Add:
+                return lhs_->Evaluate(value_getter) + rhs_->Evaluate(value_getter);
+            case Subtract:
+                return lhs_->Evaluate(value_getter) - rhs_->Evaluate(value_getter);
+            case Multiply:
+                return lhs_->Evaluate(value_getter) * rhs_->Evaluate(value_getter);
+            case Divide:
+                if(std::abs(rhs_->Evaluate(value_getter)) <= std::numeric_limits<double>::epsilon()){
+                    throw FormulaError(FormulaError::Category::Arithmetic); 
+                }
+                return lhs_->Evaluate(value_getter) / rhs_->Evaluate(value_getter);
+            default:
+                throw std::invalid_argument("undefined operation");
+        }
     }
 
 private:
@@ -180,8 +196,16 @@ public:
         return EP_UNARY;
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/ args) const override {
-        // Скопируйте ваше решение из предыдущих уроков.
+// Реализуйте метод Evaluate() для унарных операций.
+    double Evaluate(std::function<double(Position)> value_getter) const override {
+        switch (type_) {
+            case UnaryPlus:
+                return operand_->Evaluate(value_getter);
+            case UnaryMinus:
+                return -operand_->Evaluate(value_getter);
+            default:
+                throw std::invalid_argument("undefined operation");
+        }
     }
 
 private:
@@ -211,8 +235,8 @@ public:
         return EP_ATOM;
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/ args) const override {
-        // реализуйте метод.
+    double Evaluate(std::function<double(Position)> value_getter) const override {
+        return value_getter(*cell_);
     }
 
 private:
@@ -237,7 +261,8 @@ public:
         return EP_ATOM;
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/ args) const override {
+// Для чисел метод возвращает значение числа.
+    double Evaluate(std::function<double(Position)> value_getter) const override {
         return value_;
     }
 
@@ -374,13 +399,12 @@ FormulaAST ParseFormulaAST(std::istream& in) {
 
 FormulaAST ParseFormulaAST(const std::string& in_str) {
     std::istringstream in(in_str);
-    return ParseFormulaAST(in);
-}
-
-void FormulaAST::PrintCells(std::ostream& out) const {
-    for (auto cell : cells_) {
-        out << cell.ToString() << ' ';
+    try {
+        return ParseFormulaAST(in);
+    } catch (const std::exception& exc) {
+        std::throw_with_nested(FormulaException(exc.what()));
     }
+    
 }
 
 void FormulaAST::Print(std::ostream& out) const {
@@ -391,14 +415,14 @@ void FormulaAST::PrintFormula(std::ostream& out) const {
     root_expr_->PrintFormula(out, ASTImpl::EP_ATOM);
 }
 
-double FormulaAST::Execute(/*добавьте нужные аргументы*/ args) const {
-    return root_expr_->Evaluate(/*добавьте нужные аргументы*/ args);
+double FormulaAST::Execute(std::function<double(Position)> value_getter) const {
+    return root_expr_->Evaluate(value_getter);
 }
 
-FormulaAST::FormulaAST(std::unique_ptr<ASTImpl::Expr> root_expr, std::forward_list<Position> cells)
+FormulaAST::FormulaAST(std::unique_ptr<ASTImpl::Expr> root_expr,
+                        std::forward_list<Position> cells)
     : root_expr_(std::move(root_expr))
     , cells_(std::move(cells)) {
-    cells_.sort();  // to avoid sorting in GetReferencedCells
 }
 
 FormulaAST::~FormulaAST() = default;

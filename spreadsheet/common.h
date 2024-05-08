@@ -26,6 +26,10 @@ struct Position {
     static const Position NONE;
 };
 
+struct PositionHasher{
+    size_t operator()(const Position& pos) const;
+};
+
 struct Size {
     int rows = 0;
     int cols = 0;
@@ -39,7 +43,7 @@ public:
     enum class Category {
         Ref,    // ссылка на ячейку с некорректной позицией
         Value,  // ячейка не может быть трактована как число
-        Div0,  // в результате вычисления возникло деление на ноль
+        Arithmetic,  // в результате вычисления возникло деление на ноль
     };
 
     FormulaError(Category category);
@@ -48,7 +52,7 @@ public:
 
     bool operator==(FormulaError rhs) const;
 
-    std::string_view ToString() const;
+    std::string ToString() const;
 
 private:
     Category category_;
@@ -56,15 +60,22 @@ private:
 
 std::ostream& operator<<(std::ostream& output, FormulaError fe);
 
+// Исключение, выбрасываемое при попытке задать синтаксически некорректную
+// формулу
+class FormulaException : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
 // Исключение, выбрасываемое при попытке передать в метод некорректную позицию
 class InvalidPositionException : public std::out_of_range {
 public:
     using std::out_of_range::out_of_range;
 };
 
-// Исключение, выбрасываемое при попытке задать синтаксически некорректную
-// формулу
-class FormulaException : public std::runtime_error {
+// Исключение, выбрасываемое, если вставка строк/столбцов в таблицу приведёт к
+// ячейке с позицией больше максимально допустимой
+class TableTooBigException : public std::runtime_error {
 public:
     using std::runtime_error::runtime_error;
 };
@@ -75,6 +86,10 @@ class CircularDependencyException : public std::runtime_error {
 public:
     using std::runtime_error::runtime_error;
 };
+
+inline constexpr char FORMULA_SIGN = '=';
+inline constexpr char ESCAPE_SIGN = '\'';
+
 
 class CellInterface {
 public:
@@ -97,10 +112,7 @@ public:
     // формуле. Список отсортирован по возрастанию и не содержит повторяющихся
     // ячеек. В случае текстовой ячейки список пуст.
     virtual std::vector<Position> GetReferencedCells() const = 0;
-};
-
-inline constexpr char FORMULA_SIGN = '=';
-inline constexpr char ESCAPE_SIGN = '\'';
+}; 
 
 // Интерфейс таблицы
 class SheetInterface {
@@ -146,4 +158,4 @@ public:
 };
 
 // Создаёт готовую к работе пустую таблицу.
-std::unique_ptr<SheetInterface> CreateSheet();
+std::unique_ptr<SheetInterface> CreateSheet(); 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FormulaLexer.h"
+#include <FormulaLexer.h>
 #include "common.h"
 
 #include <forward_list>
@@ -23,22 +23,29 @@ public:
     FormulaAST& operator=(FormulaAST&&) = default;
     ~FormulaAST();
 
-    double Execute(/*добавьте нужные аргументы*/ args) const;
+    double Execute(std::function<double(Position)> value_getter) const;
     void PrintCells(std::ostream& out) const;
     void Print(std::ostream& out) const;
     void PrintFormula(std::ostream& out) const;
 
-    std::forward_list<Position>& GetCells() {
-        return cells_;
+    std::set<Position> GetCells() {
+        std::set<Position> poses;
+        for(Position pos : cells_){
+            poses.insert(pos);
+        }
+        return poses;
     }
 
-    const std::forward_list<Position>& GetCells() const {
-        return cells_;
+    const std::set<Position> GetCells() const {
+        std::set<Position> poses;
+        for(Position pos : cells_){
+            poses.insert(pos);
+        }
+        return poses;
     }
 
 private:
     std::unique_ptr<ASTImpl::Expr> root_expr_;
-
     // physically stores cells so that they can be
     // efficiently traversed without going through
     // the whole AST
